@@ -1,0 +1,3289 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/api/v1/health": {
+      "get": {
+        "operationId": "HealthController_health",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Estado del servicio y de la base de datos.",
+        "tags": [
+          "health"
+        ]
+      }
+    },
+    "/api/v1/health/live": {
+      "get": {
+        "operationId": "HealthController_live",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "health"
+        ]
+      }
+    },
+    "/api/v1/health/ready": {
+      "get": {
+        "operationId": "HealthController_ready",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "health"
+        ]
+      }
+    },
+    "/api/v1/auth/login": {
+      "post": {
+        "operationId": "AuthController_login",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Inicia sesión (slug de empresa + correo + contraseña). Devuelve access token y fija la cookie de refresh.",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/refresh": {
+      "post": {
+        "operationId": "AuthController_refresh",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Rota el refresh token (cookie) y emite un nuevo access token.",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/logout": {
+      "post": {
+        "operationId": "AuthController_logout",
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "summary": "Cierra la sesión: revoca la familia de refresh y borra la cookie.",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/me/subscription-notice": {
+      "get": {
+        "operationId": "AuthController_notice",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Aviso comercial del negocio de la sesión (Por vencer / En gracia). null si no requiere atención.",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/users": {
+      "get": {
+        "operationId": "AccessController_listUsers",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Usuarios del negocio (página + facetas por estado, acceso y rol).",
+        "tags": [
+          "access"
+        ]
+      },
+      "post": {
+        "operationId": "AccessController_createUser",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateUserDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Crea un usuario del negocio. Devuelve una contraseña temporal UNA sola vez.",
+        "tags": [
+          "access"
+        ]
+      }
+    },
+    "/api/v1/users/{id}": {
+      "patch": {
+        "operationId": "AccessController_updateUser",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateUserDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Cambia roles, alcance o estado (Activo/Inactivo/Bloqueado) de un usuario. Nunca se borra.",
+        "tags": [
+          "access"
+        ]
+      }
+    },
+    "/api/v1/org-units": {
+      "get": {
+        "operationId": "AccessController_listOrgUnits",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Estructura del negocio con uso (vehículos, conductores, usuarios).",
+        "tags": [
+          "access"
+        ]
+      },
+      "post": {
+        "operationId": "AccessController_createOrgUnit",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateOrgUnitDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "access"
+        ]
+      }
+    },
+    "/api/v1/org-units/{id}": {
+      "patch": {
+        "operationId": "AccessController_updateOrgUnit",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateOrgUnitDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "access"
+        ]
+      }
+    },
+    "/api/v1/roles/matrix": {
+      "get": {
+        "operationId": "AccessController_roleMatrix",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Matriz rol→permiso vigente (solo lectura, sin ROL-001).",
+        "tags": [
+          "access"
+        ]
+      }
+    },
+    "/api/v1/lookups/org": {
+      "get": {
+        "operationId": "AccessController_lookups",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Flotas y terminales activas para los selectores.",
+        "tags": [
+          "access"
+        ]
+      }
+    },
+    "/api/v1/me/password": {
+      "post": {
+        "operationId": "AccessController_changePassword",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangePasswordDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "summary": "PROPUESTA: cambio de contraseña propia (cierra las otras sesiones).",
+        "tags": [
+          "access"
+        ]
+      }
+    },
+    "/api/v1/vehicles": {
+      "get": {
+        "operationId": "FleetController_listVehicles",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Vehículos del alcance con elegibilidad, condiciones y lifecycle calculados por el servidor.",
+        "tags": [
+          "fleet"
+        ]
+      },
+      "post": {
+        "operationId": "FleetController_createVehicle",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VehicleDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "fleet"
+        ]
+      }
+    },
+    "/api/v1/vehicles/{id}": {
+      "patch": {
+        "operationId": "FleetController_updateVehicle",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateVehicleDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Actualización parcial con versión optimista (409 si cambió). Odómetro nunca retrocede (EXC-003).",
+        "tags": [
+          "fleet"
+        ]
+      }
+    },
+    "/api/v1/vehicles/{id}/block": {
+      "post": {
+        "operationId": "FleetController_block",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReasonDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "fleet"
+        ]
+      }
+    },
+    "/api/v1/vehicles/{id}/unblock": {
+      "post": {
+        "operationId": "FleetController_unblock",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReasonDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Libera un bloqueo (CTRL-024). SOD-002: quien bloqueó no libera sin revisión.",
+        "tags": [
+          "fleet"
+        ]
+      }
+    },
+    "/api/v1/vehicles/{id}/service": {
+      "post": {
+        "operationId": "FleetController_service",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VehicleServiceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Baja / reincorporación de servicio (baja lógica, con motivo).",
+        "tags": [
+          "fleet"
+        ]
+      }
+    },
+    "/api/v1/drivers": {
+      "get": {
+        "operationId": "FleetController_listDrivers",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "fleet"
+        ]
+      },
+      "post": {
+        "operationId": "FleetController_createDriver",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DriverDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "fleet"
+        ]
+      }
+    },
+    "/api/v1/drivers/{id}": {
+      "patch": {
+        "operationId": "FleetController_updateDriver",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateDriverDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "fleet"
+        ]
+      }
+    },
+    "/api/v1/drivers/{id}/active": {
+      "post": {
+        "operationId": "FleetController_setDriverActive",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DriverActiveDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "fleet"
+        ]
+      }
+    },
+    "/api/v1/documents": {
+      "get": {
+        "operationId": "FleetController_listDocuments",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "fleet"
+        ]
+      },
+      "post": {
+        "operationId": "FleetController_createDocument",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DocumentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Registra o renueva un documento: el anterior del mismo tipo queda «Reemplazado» (RN-009).",
+        "tags": [
+          "fleet"
+        ]
+      }
+    },
+    "/api/v1/maintenance-orders": {
+      "get": {
+        "operationId": "FleetController_listMaintenance",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "fleet"
+        ]
+      },
+      "post": {
+        "operationId": "FleetController_createMaintenance",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MaintenanceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "fleet"
+        ]
+      }
+    },
+    "/api/v1/maintenance-orders/{id}": {
+      "patch": {
+        "operationId": "FleetController_updateMaintenance",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateMaintenanceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "fleet"
+        ]
+      }
+    },
+    "/api/v1/maintenance-orders/{id}/advance": {
+      "post": {
+        "operationId": "FleetController_advanceMaintenance",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdvanceMaintenanceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "fleet"
+        ]
+      }
+    },
+    "/api/v1/catalog": {
+      "get": {
+        "operationId": "MastersController_list",
+        "parameters": [
+          {
+            "name": "kind",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Ítems de un catálogo (incluye inactivos; el selector filtra por active).",
+        "tags": [
+          "masters"
+        ]
+      },
+      "post": {
+        "operationId": "MastersController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CatalogDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "masters"
+        ]
+      }
+    },
+    "/api/v1/catalog/{id}": {
+      "patch": {
+        "operationId": "MastersController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CatalogUpdateDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "masters"
+        ]
+      }
+    },
+    "/api/v1/catalog/{id}/active": {
+      "post": {
+        "operationId": "MastersController_setActive",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActiveDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "masters"
+        ]
+      }
+    },
+    "/api/v1/clients/lookup": {
+      "get": {
+        "operationId": "MastersController_lookup",
+        "parameters": [
+          {
+            "name": "documentType",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "document",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Cliente por documento (404 si es la primera vez).",
+        "tags": [
+          "masters"
+        ]
+      }
+    },
+    "/api/v1/routes": {
+      "get": {
+        "operationId": "PlanningController_listRoutes",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "planning"
+        ]
+      },
+      "post": {
+        "operationId": "PlanningController_createRoute",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RouteDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Crea una ruta o una NUEVA VERSIÓN (la anterior del mismo nombre queda «Obsoleta»).",
+        "tags": [
+          "planning"
+        ]
+      }
+    },
+    "/api/v1/routes/{id}/retire": {
+      "post": {
+        "operationId": "PlanningController_retireRoute",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReasonDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "planning"
+        ]
+      }
+    },
+    "/api/v1/trips": {
+      "get": {
+        "operationId": "PlanningController_listTrips",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Viajes del alcance (paginación SQL, facetas por estado, prioridad, servicio y condición).",
+        "tags": [
+          "planning"
+        ]
+      },
+      "post": {
+        "operationId": "PlanningController_createTrip",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TripDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Planifica un viaje (RN-002 sin superposición; recursos elegibles; servicio vigente opcional).",
+        "tags": [
+          "planning"
+        ]
+      }
+    },
+    "/api/v1/trips/{id}": {
+      "get": {
+        "operationId": "PlanningController_getTrip",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "planning"
+        ]
+      }
+    },
+    "/api/v1/trips/{id}/assign": {
+      "post": {
+        "operationId": "PlanningController_assignTrip",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssignTripDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "planning"
+        ]
+      }
+    },
+    "/api/v1/trips/{id}/gate": {
+      "get": {
+        "operationId": "PlanningController_gate",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Evalúa el gate CTRL-001 y explica cada requisito (qué falla, quién corrige, qué regla).",
+        "tags": [
+          "planning"
+        ]
+      }
+    },
+    "/api/v1/trips/{id}/{action}": {
+      "post": {
+        "operationId": "PlanningController_act",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "action",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "enum": [
+                "enable",
+                "dispatch",
+                "arrival",
+                "close",
+                "cancel",
+                "interrupt",
+                "reassign",
+                "reschedule"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TripActionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Acción de lifecycle: enable | dispatch | arrival | close | cancel | interrupt | reassign | reschedule.",
+        "tags": [
+          "planning"
+        ]
+      }
+    },
+    "/api/v1/trips/{id}/messages": {
+      "get": {
+        "operationId": "PlanningController_listMessages",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "planning"
+        ]
+      },
+      "post": {
+        "operationId": "PlanningController_sendMessage",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MessageDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "planning"
+        ]
+      }
+    },
+    "/api/v1/services": {
+      "get": {
+        "operationId": "PlanningController_listServices",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "planning"
+        ]
+      },
+      "post": {
+        "operationId": "PlanningController_createService",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ServiceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "planning"
+        ]
+      }
+    },
+    "/api/v1/services/{id}": {
+      "patch": {
+        "operationId": "PlanningController_updateService",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ServiceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "planning"
+        ]
+      }
+    },
+    "/api/v1/services/{id}/transition": {
+      "post": {
+        "operationId": "PlanningController_transitionService",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ServiceTransitionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "planning"
+        ]
+      }
+    },
+    "/api/v1/tracking/positions": {
+      "get": {
+        "operationId": "MonitoringController_positions",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Última posición por vehículo del alcance, con frescura calculada por el servidor (RN-005).",
+        "tags": [
+          "monitoring"
+        ]
+      }
+    },
+    "/api/v1/tracking/summary": {
+      "get": {
+        "operationId": "MonitoringController_summary",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "monitoring"
+        ]
+      }
+    },
+    "/api/v1/alerts": {
+      "get": {
+        "operationId": "MonitoringController_listAlerts",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Bandeja de alertas (página, orden por severidad; facetas solo de alertas abiertas).",
+        "tags": [
+          "monitoring"
+        ]
+      }
+    },
+    "/api/v1/alerts/{id}/{action}": {
+      "post": {
+        "operationId": "MonitoringController_alertAction",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "action",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AlertActionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "acknowledge | manage | resolve | close (cierre de Alta/Crítica exige revisión senior).",
+        "tags": [
+          "monitoring"
+        ]
+      }
+    },
+    "/api/v1/telemetry/positions": {
+      "post": {
+        "operationId": "MonitoringController_ingest",
+        "parameters": [
+          {
+            "name": "X-Integration-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TelemetryBatchDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": ""
+          }
+        },
+        "summary": "Recibe lotes de posiciones (≤ 500) del adaptador del proveedor GPS. Idempotente por vehículo + instante.",
+        "tags": [
+          "monitoring"
+        ]
+      }
+    },
+    "/api/v1/incidents": {
+      "get": {
+        "operationId": "IncidentsController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "incidents"
+        ]
+      },
+      "post": {
+        "operationId": "IncidentsController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IncidentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "incidents"
+        ]
+      }
+    },
+    "/api/v1/incidents/{id}/actions": {
+      "post": {
+        "operationId": "IncidentsController_addAction",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "incidents"
+        ]
+      }
+    },
+    "/api/v1/incidents/{id}/advance": {
+      "post": {
+        "operationId": "IncidentsController_advance",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdvanceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "incidents"
+        ]
+      }
+    },
+    "/api/v1/driver/trips": {
+      "get": {
+        "operationId": "DriverController_myTrips",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Mis viajes (asignado → en destino), con checklist y vencimiento de la copia offline.",
+        "tags": [
+          "driver"
+        ]
+      }
+    },
+    "/api/v1/driver/actions": {
+      "post": {
+        "operationId": "DriverController_submit",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DriverActionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Acción del outbox offline. Respuesta Confirmada | Rechazada (definitiva, con motivo).",
+        "tags": [
+          "driver"
+        ]
+      }
+    },
+    "/api/v1/cargo-shipments": {
+      "get": {
+        "operationId": "CargoController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "cargo"
+        ]
+      },
+      "post": {
+        "operationId": "CargoController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CargoDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "cargo"
+        ]
+      }
+    },
+    "/api/v1/cargo-shipments/assignable-trips": {
+      "get": {
+        "operationId": "CargoController_assignableTrips",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "cargo"
+        ]
+      }
+    },
+    "/api/v1/cargo-shipments/{id}": {
+      "patch": {
+        "operationId": "CargoController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CargoDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "cargo"
+        ]
+      }
+    },
+    "/api/v1/cargo-shipments/{id}/assign": {
+      "post": {
+        "operationId": "CargoController_assign",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssignDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "cargo"
+        ]
+      }
+    },
+    "/api/v1/cargo-shipments/{id}/advance": {
+      "post": {
+        "operationId": "CargoController_advance",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdvanceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "cargo"
+        ]
+      }
+    },
+    "/api/v1/passenger-bookings": {
+      "get": {
+        "operationId": "PassengersController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "passengers"
+        ]
+      },
+      "post": {
+        "operationId": "PassengersController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PassengerDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "passengers"
+        ]
+      }
+    },
+    "/api/v1/passenger-bookings/assignable-trips": {
+      "get": {
+        "operationId": "PassengersController_assignableTrips",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "passengers"
+        ]
+      }
+    },
+    "/api/v1/passenger-bookings/{id}": {
+      "patch": {
+        "operationId": "PassengersController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PassengerUpdateDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "passengers"
+        ]
+      }
+    },
+    "/api/v1/passenger-bookings/{id}/advance": {
+      "post": {
+        "operationId": "PassengersController_advance",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdvanceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "passengers"
+        ]
+      }
+    },
+    "/api/v1/trips/{id}/manifest": {
+      "get": {
+        "operationId": "PassengersController_manifest",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "passengers"
+        ]
+      }
+    },
+    "/api/v1/passengers/lookup": {
+      "get": {
+        "operationId": "PassengersController_lookup",
+        "parameters": [
+          {
+            "name": "documentType",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "document",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "passengers"
+        ]
+      }
+    },
+    "/api/v1/me/bookings": {
+      "get": {
+        "operationId": "PassengersController_mine",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "passengers"
+        ]
+      }
+    },
+    "/api/v1/me/bookings/{id}/cancel": {
+      "post": {
+        "operationId": "PassengersController_cancelMine",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CancelDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "passengers"
+        ]
+      }
+    },
+    "/api/v1/public/settings/quick-access": {
+      "get": {
+        "operationId": "PublicController_quickAccess",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Solo el flag de tarjetas de acceso rápido del Login (nunca días de gracia ni nada operativo).",
+        "tags": [
+          "public"
+        ]
+      }
+    },
+    "/api/v1/public/terminals": {
+      "get": {
+        "operationId": "PublicController_terminals",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "public"
+        ]
+      }
+    },
+    "/api/v1/public/schedule": {
+      "get": {
+        "operationId": "PublicController_schedule",
+        "parameters": [
+          {
+            "name": "baseId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "date",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Cartelera de salidas/llegadas de una terminal para un día local (AAAA-MM-DD).",
+        "tags": [
+          "public"
+        ]
+      }
+    },
+    "/api/v1/public/passenger-bookings/find": {
+      "post": {
+        "operationId": "PublicController_find",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FindBookingDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Busca reservas por documento + apellido paterno (POST para no dejar el documento en logs de URL).",
+        "tags": [
+          "public"
+        ]
+      }
+    },
+    "/api/v1/public/passenger-bookings/{id}/cancel": {
+      "post": {
+        "operationId": "PublicController_cancel",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CancelBookingDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "public"
+        ]
+      }
+    },
+    "/api/v1/files": {
+      "post": {
+        "operationId": "FilesController_reserve",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReserveDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Reserva un archivo y devuelve una URL temporal de subida directa (10 min).",
+        "tags": [
+          "files"
+        ]
+      }
+    },
+    "/api/v1/files/{id}/complete": {
+      "post": {
+        "operationId": "FilesController_complete",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "files"
+        ]
+      }
+    },
+    "/api/v1/files/{id}/download-url": {
+      "get": {
+        "operationId": "FilesController_downloadUrl",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "URL temporal de vista/descarga (5 min). El acceso queda auditado.",
+        "tags": [
+          "files"
+        ]
+      }
+    },
+    "/api/v1/files/blob/{token}": {
+      "put": {
+        "operationId": "FilesController_putBlob",
+        "parameters": [
+          {
+            "name": "token",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "files"
+        ]
+      },
+      "get": {
+        "operationId": "FilesController_getBlob",
+        "parameters": [
+          {
+            "name": "token",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "files"
+        ]
+      }
+    },
+    "/api/v1/audit-events": {
+      "get": {
+        "operationId": "AuditController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Auditoría por CURSOR (keyset). La plataforma ve metadatos sin contenido de negocio (EXC-032).",
+        "tags": [
+          "audit"
+        ]
+      }
+    },
+    "/api/v1/audit-events/timeline": {
+      "get": {
+        "operationId": "AuditController_timeline",
+        "parameters": [
+          {
+            "name": "resourceType",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "resourceId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "audit"
+        ]
+      }
+    },
+    "/api/v1/exports": {
+      "post": {
+        "operationId": "AuditController_registerExport",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExportDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Autoriza y audita una exportación ANTES de generarla (POL-004 · CTRL-026).",
+        "tags": [
+          "audit"
+        ]
+      }
+    },
+    "/api/v1/kpis": {
+      "get": {
+        "operationId": "AnalyticsController_kpis",
+        "parameters": [
+          {
+            "name": "period",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "baseId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "KPI-001…011 con fórmula, período, corte y tendencia real. Sin metas inventadas (target = null).",
+        "tags": [
+          "analytics"
+        ]
+      }
+    },
+    "/api/v1/dashboard/overview": {
+      "get": {
+        "operationId": "AnalyticsController_overview",
+        "parameters": [
+          {
+            "name": "period",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "analytics"
+        ]
+      }
+    },
+    "/api/v1/notifications": {
+      "get": {
+        "operationId": "NotificationsController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "notifications"
+        ]
+      }
+    },
+    "/api/v1/notifications/{id}/read": {
+      "post": {
+        "operationId": "NotificationsController_read",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "notifications"
+        ]
+      }
+    },
+    "/api/v1/notifications/read-all": {
+      "post": {
+        "operationId": "NotificationsController_readAll",
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "notifications"
+        ]
+      }
+    },
+    "/api/v1/platform/tenants": {
+      "get": {
+        "operationId": "PlatformController_listTenants",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "platform"
+        ]
+      },
+      "post": {
+        "operationId": "PlatformController_createTenant",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTenantDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Alta de negocio: suscripción + Admin Owner + Admin Tenant en una sola transacción.",
+        "tags": [
+          "platform"
+        ]
+      }
+    },
+    "/api/v1/platform/tenants/{id}": {
+      "patch": {
+        "operationId": "PlatformController_updateTenant",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateTenantDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "platform"
+        ]
+      }
+    },
+    "/api/v1/platform/tenants/{id}/deployment": {
+      "patch": {
+        "operationId": "PlatformController_updateDeployment",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeploymentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "platform"
+        ]
+      }
+    },
+    "/api/v1/platform/tenants/{id}/subscription": {
+      "patch": {
+        "operationId": "PlatformController_renew",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RenewDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Renueva o cambia de plan: reemplaza la vigencia (historial conservado, auditado).",
+        "tags": [
+          "platform"
+        ]
+      }
+    },
+    "/api/v1/platform/tenants/{id}/transition": {
+      "post": {
+        "operationId": "PlatformController_transition",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransitionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Activar / suspender / reactivar. «Cerrar» bloqueado hasta política de retención (GAP-003).",
+        "tags": [
+          "platform"
+        ]
+      }
+    },
+    "/api/v1/platform/tenants/{id}/admins": {
+      "post": {
+        "operationId": "PlatformController_assignTenantAdmin",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TenantAdminDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "platform"
+        ]
+      }
+    },
+    "/api/v1/platform/tenant-admins": {
+      "get": {
+        "operationId": "PlatformController_listSlots",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "platform"
+        ]
+      }
+    },
+    "/api/v1/platform/tenant-admins/{id}/status": {
+      "post": {
+        "operationId": "PlatformController_setTenantAdmin",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StatusDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "platform"
+        ]
+      }
+    },
+    "/api/v1/platform/health": {
+      "get": {
+        "operationId": "PlatformController_health",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "platform"
+        ]
+      }
+    },
+    "/api/v1/platform/overview": {
+      "get": {
+        "operationId": "PlatformController_overview",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "platform"
+        ]
+      }
+    },
+    "/api/v1/platform/alerts": {
+      "get": {
+        "operationId": "PlatformController_alerts",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "platform"
+        ]
+      }
+    },
+    "/api/v1/platform/alerts/recalculate": {
+      "post": {
+        "operationId": "PlatformController_recalculate",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "platform"
+        ]
+      }
+    },
+    "/api/v1/platform/alerts/{id}/{action}": {
+      "post": {
+        "operationId": "PlatformController_alertStatus",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "action",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "platform"
+        ]
+      }
+    },
+    "/api/v1/platform/support-sessions": {
+      "get": {
+        "operationId": "PlatformController_listSupport",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "platform"
+        ]
+      },
+      "post": {
+        "operationId": "PlatformController_openSupport",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SupportDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "SOD-003: acceso de soporte por caso + motivo + alcance, máx. 8 h, auditado en plataforma y en el negocio.",
+        "tags": [
+          "platform"
+        ]
+      }
+    },
+    "/api/v1/platform/support-sessions/interactions": {
+      "get": {
+        "operationId": "PlatformController_interactions",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "platform"
+        ]
+      }
+    },
+    "/api/v1/platform/support-sessions/{id}/diagnostics": {
+      "get": {
+        "operationId": "PlatformController_diagnostics",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "platform"
+        ]
+      }
+    },
+    "/api/v1/platform/support-sessions/{id}/exit": {
+      "post": {
+        "operationId": "PlatformController_exit",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "platform"
+        ]
+      }
+    },
+    "/api/v1/platform/support-sessions/{id}/revoke": {
+      "post": {
+        "operationId": "PlatformController_revoke",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "platform"
+        ]
+      }
+    },
+    "/api/v1/platform/admins": {
+      "get": {
+        "operationId": "PlatformController_listAdmins",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "platform"
+        ]
+      },
+      "post": {
+        "operationId": "PlatformController_createAdmin",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlatformAdminDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Crea un SuperAdmin Delegado (solo el Nativo; máx. 2). Devuelve la contraseña temporal una sola vez.",
+        "tags": [
+          "platform"
+        ]
+      }
+    },
+    "/api/v1/platform/admins/{id}": {
+      "patch": {
+        "operationId": "PlatformController_updateAdmin",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlatformAdminDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "platform"
+        ]
+      }
+    },
+    "/api/v1/platform/admins/{id}/status": {
+      "post": {
+        "operationId": "PlatformController_setAdmin",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StatusDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "platform"
+        ]
+      }
+    },
+    "/api/v1/platform/backups": {
+      "get": {
+        "operationId": "PlatformController_listBackups",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "platform"
+        ]
+      },
+      "post": {
+        "operationId": "PlatformController_createBackup",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BackupDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "PENDIENTE DOC-I-OPS: responde EXTERNAL_DEPENDENCY_UNAVAILABLE sin modificar datos.",
+        "tags": [
+          "platform"
+        ]
+      }
+    },
+    "/api/v1/platform/backups/{id}/restore": {
+      "post": {
+        "operationId": "PlatformController_restoreBackup",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReasonDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "platform"
+        ]
+      }
+    },
+    "/api/v1/platform/roles": {
+      "get": {
+        "operationId": "PlatformController_roles",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "platform"
+        ]
+      }
+    },
+    "/api/v1/platform/roles/{role}": {
+      "patch": {
+        "operationId": "PlatformController_updateRole",
+        "parameters": [
+          {
+            "name": "role",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RolePermsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "platform"
+        ]
+      }
+    },
+    "/api/v1/platform/roles/{role}/reset": {
+      "post": {
+        "operationId": "PlatformController_resetRole",
+        "parameters": [
+          {
+            "name": "role",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "platform"
+        ]
+      }
+    },
+    "/api/v1/platform/settings": {
+      "get": {
+        "operationId": "PlatformController_settings",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "platform"
+        ]
+      },
+      "patch": {
+        "operationId": "PlatformController_updateSettings",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SettingsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "platform"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "Sistema de Gestión de Transportes — API",
+    "description": "DOC-E-BE · Contratos API definitivos (REST /api/v1). Errores application/problem+json (ADR-013). Autorización por permiso + alcance + política; el tenant se resuelve SIEMPRE desde la sesión.",
+    "version": "1.0.0",
+    "contact": {}
+  },
+  "tags": [],
+  "servers": [],
+  "components": {
+    "securitySchemes": {
+      "bearer": {
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "type": "http"
+      }
+    },
+    "schemas": {
+      "LoginDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "CreateUserDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "UpdateUserDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "CreateOrgUnitDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "UpdateOrgUnitDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "ChangePasswordDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "VehicleDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "UpdateVehicleDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "ReasonDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "VehicleServiceDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "DriverDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "UpdateDriverDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "DriverActiveDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "DocumentDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "MaintenanceDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "UpdateMaintenanceDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "AdvanceMaintenanceDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "CatalogDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "CatalogUpdateDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "ActiveDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "RouteDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "TripDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "AssignTripDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "TripActionDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "MessageDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "ServiceDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "ServiceTransitionDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "AlertActionDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "TelemetryBatchDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "IncidentDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "ActionDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "AdvanceDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "DriverActionDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "CargoDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "AssignDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "PassengerDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "PassengerUpdateDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "CancelDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "FindBookingDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "CancelBookingDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "ReserveDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "ExportDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "CreateTenantDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "UpdateTenantDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "DeploymentDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "RenewDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "TransitionDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "TenantAdminDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "StatusDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "SupportDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "PlatformAdminDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "BackupDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "RolePermsDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "SettingsDto": {
+        "type": "object",
+        "properties": {}
+      }
+    }
+  }
+}

@@ -1,0 +1,1277 @@
+// DOC-E-BE §O — Modelo de datos (Prisma 7 + PostgreSQL).
+// Fuente: DOC-A §F (ENT-001–020), lifecycle de §C, RN de §K, y los modelos PROPUESTOS por DOC-D-FE (PC-A1/6/8/9/11/15/16/18/19/20).
+// Reglas:
+//  - Todo registro de negocio lleva `tenantId` (NFR-001 / RN-010). El aislamiento lo aplica la extensión de Prisma
+//    (`src/database/tenant-isolation.extension.ts`), no cada servicio.
+//  - Lifecycle ≠ condiciones (DEC-002): las condiciones se DERIVAN de alertas/incidencias/documentos al leer; no se persisten.
+//  - Historial inmutable: nada de borrado físico de negocio; auditoría append-only (trigger en la migración).
+//  - Los valores de enum se almacenan con la etiqueta de negocio de DOC-A (@map) para que la BD sea legible en reportes.
+
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+/// ───────────────────────────── Plataforma (ENT-001) ─────────────────────────────
+
+enum TenantLifecycle {
+  BORRADOR    @map("Borrador")
+  CONFIGURADO @map("Configurado")
+  ACTIVO      @map("Activo")
+  SUSPENDIDO  @map("Suspendido")
+  REACTIVADO  @map("Reactivado")
+  CERRADO     @map("Cerrado")
+}
+
+enum CommercialPlan {
+  STARTER    @map("Starter")
+  BUSINESS   @map("Business")
+  ENTERPRISE @map("Enterprise")
+}
+
+enum DeploymentMode {
+  SAAS       @map("SaaS compartido")
+  PRIVATE    @map("Nube privada gestionada")
+  ON_PREMISE @map("On-premise")
+  HYBRID     @map("Híbrido")
+}
+
+model Tenant {
+  id               String          @id @default(uuid(7)) @db.Uuid
+  /// Identificador público para el Login; NO es la clave de seguridad (lo es `id`).
+  slug             String          @unique
+  name             String          @unique
+  lifecycle        TenantLifecycle @default(BORRADOR)
+  timezone         String
+  adminContact     String
+  lastChangeReason String?
+  createdAt        DateTime        @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime        @updatedAt @db.Timestamptz(3)
+
+  subscriptions          TenantSubscription[]
+  deployment             TenantDeployment?
+  users                  User[]
+  supportSessions        SupportSession[]        @relation("SupportSession_tenantId")
+  backupRecords          BackupRecord[]          @relation("BackupRecord_tenantId")
+  userRoles              UserRole[]              @relation("UserRole_tenantId")
+  userScopes             UserScope[]             @relation("UserScope_tenantId")
+  authSessions           AuthSession[]           @relation("AuthSession_tenantId")
+  orgUnits               OrgUnit[]               @relation("OrgUnit_tenantId")
+  tenantCounters         TenantCounter[]         @relation("TenantCounter_tenantId")
+  vehicles               Vehicle[]               @relation("Vehicle_tenantId")
+  drivers                Driver[]                @relation("Driver_tenantId")
+  complianceDocuments    ComplianceDocument[]    @relation("ComplianceDocument_tenantId")
+  maintenanceOrders      MaintenanceOrder[]      @relation("MaintenanceOrder_tenantId")
+  routes                 Route[]                 @relation("Route_tenantId")
+  transportServices      TransportService[]      @relation("TransportService_tenantId")
+  trips                  Trip[]                  @relation("Trip_tenantId")
+  tripEvents             TripEvent[]             @relation("TripEvent_tenantId")
+  tripAssignments        TripAssignment[]        @relation("TripAssignment_tenantId")
+  gateEvaluations        GateEvaluation[]        @relation("GateEvaluation_tenantId")
+  dispatchMessages       DispatchMessage[]       @relation("DispatchMessage_tenantId")
+  telemetryEvents        TelemetryEvent[]        @relation("TelemetryEvent_tenantId")
+  vehicleLastPositions   VehicleLastPosition[]   @relation("VehicleLastPosition_tenantId")
+  integrationCredentials IntegrationCredential[] @relation("IntegrationCredential_tenantId")
+  alerts                 Alert[]                 @relation("Alert_tenantId")
+  incidents              Incident[]              @relation("Incident_tenantId")
+  incidentActions        IncidentAction[]        @relation("IncidentAction_tenantId")
+  catalogItems           CatalogItem[]           @relation("CatalogItem_tenantId")
+  clientProfiles         ClientProfile[]         @relation("ClientProfile_tenantId")
+  cargoShipments         CargoShipment[]         @relation("CargoShipment_tenantId")
+  shipmentEvents         ShipmentEvent[]         @relation("ShipmentEvent_tenantId")
+  passengerProfiles      PassengerProfile[]      @relation("PassengerProfile_tenantId")
+  passengerBookings      PassengerBooking[]      @relation("PassengerBooking_tenantId")
+  bookingEvents          BookingEvent[]          @relation("BookingEvent_tenantId")
+  storedFiles            StoredFile[]            @relation("StoredFile_tenantId")
+  notifications          Notification[]          @relation("Notification_tenantId")
+
+  @@map("tenant")
+}
+
+/// Suscripción comercial (PC-A1 Fase 4). Cada renovación crea una fila nueva: el historial de vigencias no se sobrescribe.
+/// El estado (Por vencer / En gracia / Bloqueada) se CALCULA contra `platform_settings.graceDays`; nunca es un booleano.
+model TenantSubscription {
+  id           String         @id @default(uuid(7)) @db.Uuid
+  tenantId     String         @db.Uuid
+  tenant       Tenant         @relation(fields: [tenantId], references: [id])
+  plan         CommercialPlan
+  billingCycle String         @default("Mensual")
+  startsAt     DateTime       @db.Timestamptz(3)
+  endsAt       DateTime       @db.Timestamptz(3)
+  /// La vigente es la última registrada; las anteriores quedan como historial.
+  current      Boolean        @default(true)
+  reason       String?
+  createdAt    DateTime       @default(now()) @db.Timestamptz(3)
+  createdBy    String
+
+  @@index([tenantId, current])
+  @@map("tenant_subscription")
+}
+
+/// Metadatos contractuales de despliegue (FE-077). Nunca credenciales, IPs ni datos operativos.
+model TenantDeployment {
+  tenantId             String         @id @db.Uuid
+  tenant               Tenant         @relation(fields: [tenantId], references: [id])
+  mode                 DeploymentMode @default(SAAS)
+  version              String
+  capacityContract     String
+  technicalContact     String
+  supportChannel       String
+  monitoringAuthorized Boolean        @default(true)
+  licenseStatus        String         @default("Vigente")
+  lastUpdatedAt        DateTime?      @db.Timestamptz(3)
+  lastBackupVerifiedAt DateTime?      @db.Timestamptz(3)
+
+  @@map("tenant_deployment")
+}
+
+/// Ajustes globales de la instalación (fila única id = 1).
+model PlatformSettings {
+  id                      Int      @id @default(1)
+  quickAccessCardsEnabled Boolean  @default(false)
+  graceDays               Int      @default(5)
+  updatedAt               DateTime @updatedAt @db.Timestamptz(3)
+
+  @@map("platform_settings")
+}
+
+/// Personalización de la matriz rol→permiso por el SuperAdmin (PC-A1 Fase 3). Sin fila = matriz base DOC-A.
+model RoleOverride {
+  roleId      String   @id
+  permissions String[]
+  updatedAt   DateTime @updatedAt @db.Timestamptz(3)
+  updatedBy   String
+
+  @@map("role_override")
+}
+
+/// Estado de gestión de una señal del Centro de alertas de plataforma (las señales se recalculan; su gestión persiste).
+model PlatformAlertState {
+  signalId  String   @id
+  status    String
+  title     String
+  snapshot  Json
+  changedAt DateTime @db.Timestamptz(3)
+  changedBy String
+
+  @@map("platform_alert_state")
+}
+
+enum SupportSessionStatus {
+  ACTIVA   @map("Activa")
+  REVOCADA @map("Revocada")
+  EXPIRADA @map("Expirada")
+}
+
+/// SOD-003: acceso de soporte excepcional, acotado por caso, motivo, alcance y ≤ 8 h.
+model SupportSession {
+  id             String               @id @default(uuid(7)) @db.Uuid
+  tenantId       String               @db.Uuid
+  tenant         Tenant               @relation("SupportSession_tenantId", fields: [tenantId], references: [id], onDelete: Restrict)
+  tenantName     String
+  caseRef        String
+  reason         String
+  scope          String
+  requestedBy    String
+  requestedById  String               @db.Uuid
+  requestedByRef User                 @relation("SupportSession_requestedById", fields: [requestedById], references: [id], onDelete: Restrict)
+  startedAt      DateTime             @default(now()) @db.Timestamptz(3)
+  expiresAt      DateTime             @db.Timestamptz(3)
+  status         SupportSessionStatus @default(ACTIVA)
+  revokedAt      DateTime?            @db.Timestamptz(3)
+  interactions   SupportInteraction[]
+
+  @@index([status, expiresAt])
+  @@map("support_session")
+}
+
+model SupportInteraction {
+  id            String               @id @default(uuid(7)) @db.Uuid
+  sessionId     String               @db.Uuid
+  session       SupportSession       @relation(fields: [sessionId], references: [id])
+  at            DateTime             @default(now()) @db.Timestamptz(3)
+  actor         String
+  action        String
+  sessionStatus SupportSessionStatus
+
+  @@index([at])
+  @@map("support_interaction")
+}
+
+/// Respaldo por negocio (PC-A1 Fase 2): la plataforma solo ve metadatos. El contenido vive en el almacenamiento de respaldos
+/// (DOC-I-OPS); aquí solo la referencia. Crear/restaurar queda PENDIENTE de la estrategia de OPS (ver DOC-E-BE §T/§Y).
+model BackupRecord {
+  id             String    @id @default(uuid(7)) @db.Uuid
+  tenantId       String    @db.Uuid
+  tenant         Tenant    @relation("BackupRecord_tenantId", fields: [tenantId], references: [id], onDelete: Restrict)
+  tenantName     String
+  createdAt      DateTime  @default(now()) @db.Timestamptz(3)
+  createdBy      String
+  sizeApproxKb   Int
+  storageRef     String?
+  lastRestoredAt DateTime? @db.Timestamptz(3)
+
+  @@index([tenantId, createdAt])
+  @@map("backup_record")
+}
+
+/// ───────────────────────────── Identidad y acceso (ENT-002/003, J) ─────────────────────────────
+
+enum UserStatus {
+  ACTIVO    @map("Activo")
+  INACTIVO  @map("Inactivo")
+  BLOQUEADO @map("Bloqueado")
+}
+
+/// Usuario. `tenantId = null` ⇒ cuenta de plataforma (ROL-001). El correo es único POR negocio (PC-A22).
+model User {
+  id           String     @id @default(uuid(7)) @db.Uuid
+  tenantId     String?    @db.Uuid
+  tenant       Tenant?    @relation(fields: [tenantId], references: [id])
+  name         String
+  email        String
+  /// Correo normalizado (minúsculas) para la unicidad por alcance.
+  emailKey     String
+  passwordHash String
+  status       UserStatus @default(ACTIVO)
+  /// PC-A1: SuperAdmin Nativo (único). Los delegados tienen `false`.
+  isNative     Boolean    @default(false)
+  /// PC-A9: documento del pasajero que enlaza su cuenta con sus reservas (ROL-014).
+  document     String?
+  lastLoginAt  DateTime?  @db.Timestamptz(3)
+  failedLogins Int        @default(0)
+  lockedUntil  DateTime?  @db.Timestamptz(3)
+  createdAt    DateTime   @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime   @updatedAt @db.Timestamptz(3)
+
+  roles                           UserRole[]
+  scopes                          UserScope[]
+  sessions                        AuthSession[]
+  driver                          Driver?
+  vehiclesByBlockedBy             Vehicle[]         @relation("Vehicle_blockedById")
+  tripsByCreatedByUser            Trip[]            @relation("Trip_createdByUserId")
+  dispatchMessagesByAuthor        DispatchMessage[] @relation("DispatchMessage_authorId")
+  incidentsByReportedByRef        Incident[]        @relation("Incident_reportedById")
+  supportSessionsByRequestedByRef SupportSession[]  @relation("SupportSession_requestedById")
+
+  @@index([tenantId, status])
+  @@map("app_user")
+}
+
+model UserRole {
+  userId   String  @db.Uuid
+  user     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenantId String? @db.Uuid
+  tenant   Tenant? @relation("UserRole_tenantId", fields: [tenantId], references: [id], onDelete: Restrict)
+  roleId   String
+
+  @@id([userId, roleId])
+  @@index([tenantId, roleId])
+  @@map("user_role")
+}
+
+model UserScope {
+  id       String  @id @default(uuid(7)) @db.Uuid
+  userId   String  @db.Uuid
+  user     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenantId String? @db.Uuid
+  tenant   Tenant? @relation("UserScope_tenantId", fields: [tenantId], references: [id], onDelete: Restrict)
+  type     String
+  refId    String?
+  label    String
+
+  @@index([userId])
+  @@map("user_scope")
+}
+
+/// Sesión de refresco (ADR-003): refresh token opaco, guardado solo como hash, rotado en cada uso.
+/// `familyId` agrupa las rotaciones: reutilizar un token ya rotado revoca toda la familia (detección de robo).
+model AuthSession {
+  id           String    @id @default(uuid(7)) @db.Uuid
+  userId       String    @db.Uuid
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenantId     String?   @db.Uuid
+  tenant       Tenant?   @relation("AuthSession_tenantId", fields: [tenantId], references: [id], onDelete: Restrict)
+  familyId     String    @db.Uuid
+  tokenHash    String    @unique
+  expiresAt    DateTime  @db.Timestamptz(3)
+  rotatedAt    DateTime? @db.Timestamptz(3)
+  revokedAt    DateTime? @db.Timestamptz(3)
+  revokeReason String?
+  ip           String?
+  userAgent    String?
+  createdAt    DateTime  @default(now()) @db.Timestamptz(3)
+
+  @@index([userId, revokedAt])
+  @@index([familyId])
+  @@map("auth_session")
+}
+
+enum OrgUnitType {
+  ORGANIZACION @map("Organización")
+  SEDE         @map("Sede")
+  BASE         @map("Base")
+  UNIDAD       @map("Unidad")
+  FLOTA        @map("Flota")
+}
+
+/// ENT-002/003/004. «Base» = terminal terrestre (PC-A12): lleva ciudad y dirección.
+model OrgUnit {
+  id              String      @id @default(uuid(7)) @db.Uuid
+  tenantId        String      @db.Uuid
+  tenant          Tenant      @relation("OrgUnit_tenantId", fields: [tenantId], references: [id], onDelete: Restrict)
+  type            OrgUnitType
+  name            String
+  parentId        String?     @db.Uuid
+  parent          OrgUnit?    @relation("OrgTree", fields: [parentId], references: [id])
+  children        OrgUnit[]   @relation("OrgTree")
+  active          Boolean     @default(true)
+  city            String?
+  address         String?
+  createdAt       DateTime    @default(now()) @db.Timestamptz(3)
+  vehiclesByFleet Vehicle[]   @relation("Vehicle_fleetId")
+  vehiclesByBase  Vehicle[]   @relation("Vehicle_baseId")
+  driversByBase   Driver[]    @relation("Driver_baseId")
+  routesByBase    Route[]     @relation("Route_baseId")
+  tripsByBase     Trip[]      @relation("Trip_baseId")
+
+  @@unique([tenantId, type, name])
+  @@index([tenantId, type])
+  @@map("org_unit")
+}
+
+/// Contadores por negocio para los códigos visibles (VJ-, INC-, OT-, CG-, PX-, SV-). Incremento atómico en la transacción.
+model TenantCounter {
+  tenantId String @db.Uuid
+  tenant   Tenant @relation("TenantCounter_tenantId", fields: [tenantId], references: [id], onDelete: Restrict)
+  name     String
+  value    Int    @default(0)
+
+  @@id([tenantId, name])
+  @@map("tenant_counter")
+}
+
+/// ───────────────────────────── Recursos y cumplimiento (ENT-004–008) ─────────────────────────────
+
+enum VehicleLifecycle {
+  REGISTRADO   @map("Registrado")
+  DISPONIBLE   @map("Disponible")
+  ASIGNADO     @map("Asignado")
+  EN_OPERACION @map("En operación")
+}
+
+model Vehicle {
+  id                         String               @id @default(uuid(7)) @db.Uuid
+  tenantId                   String               @db.Uuid
+  tenant                     Tenant               @relation("Vehicle_tenantId", fields: [tenantId], references: [id], onDelete: Restrict)
+  plate                      String
+  vehicleClass               String
+  fleetId                    String               @db.Uuid
+  fleet                      OrgUnit              @relation("Vehicle_fleetId", fields: [fleetId], references: [id], onDelete: Restrict)
+  baseId                     String               @db.Uuid
+  base                       OrgUnit              @relation("Vehicle_baseId", fields: [baseId], references: [id], onDelete: Restrict)
+  capacityPassengers         Int
+  capacityKg                 Int
+  fuel                       String
+  odometerKm                 Int
+  gpsDeviceId                String?
+  /// Lifecycle base persistido; «Asignado/En operación» se derivan de los viajes abiertos al leer.
+  lifecycle                  VehicleLifecycle     @default(REGISTRADO)
+  blocked                    Boolean              @default(false)
+  blockReason                String?
+  blockedById                String?              @db.Uuid
+  blockedBy                  User?                @relation("Vehicle_blockedById", fields: [blockedById], references: [id], onDelete: Restrict)
+  outOfService               Boolean              @default(false)
+  version                    Int                  @default(1)
+  createdAt                  DateTime             @default(now()) @db.Timestamptz(3)
+  updatedAt                  DateTime             @updatedAt @db.Timestamptz(3)
+  maintenanceOrdersByVehicle MaintenanceOrder[]   @relation("MaintenanceOrder_vehicleId")
+  tripsByVehicle             Trip[]               @relation("Trip_vehicleId")
+  telemetryEventsByVehicle   TelemetryEvent[]     @relation("TelemetryEvent_vehicleId")
+  lastPosition               VehicleLastPosition? @relation("VehicleLastPosition_vehicleId")
+  alertsByVehicle            Alert[]              @relation("Alert_vehicleId")
+  incidentsByVehicle         Incident[]           @relation("Incident_vehicleId")
+
+  @@unique([tenantId, plate])
+  @@unique([tenantId, gpsDeviceId])
+  @@index([tenantId, baseId])
+  @@map("vehicle")
+}
+
+model Driver {
+  id              String   @id @default(uuid(7)) @db.Uuid
+  tenantId        String   @db.Uuid
+  tenant          Tenant   @relation("Driver_tenantId", fields: [tenantId], references: [id], onDelete: Restrict)
+  name            String
+  licenseNo       String
+  licenseCategory String
+  licenseExpiry   DateTime @db.Timestamptz(3)
+  baseId          String   @db.Uuid
+  base            OrgUnit  @relation("Driver_baseId", fields: [baseId], references: [id], onDelete: Restrict)
+  restrictions    String   @default("")
+  trainingPending Boolean  @default(false)
+  aptitudePending Boolean  @default(false)
+  inactive        Boolean  @default(false)
+  userId          String?  @unique @db.Uuid
+  user            User?    @relation(fields: [userId], references: [id])
+  version         Int      @default(1)
+  createdAt       DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime @updatedAt @db.Timestamptz(3)
+  tripsByDriver   Trip[]   @relation("Trip_driverId")
+
+  @@unique([tenantId, licenseNo])
+  @@index([tenantId, baseId])
+  @@map("driver")
+}
+
+enum ResourceType {
+  VEHICULO  @map("Vehículo")
+  CONDUCTOR @map("Conductor")
+}
+
+/// ENT-007. Renovar = nuevo documento; el anterior queda `replaced` (RN-009). El lifecycle Vigente/Por vencer/Vencido se calcula.
+model ComplianceDocument {
+  id               String       @id @default(uuid(7)) @db.Uuid
+  tenantId         String       @db.Uuid
+  tenant           Tenant       @relation("ComplianceDocument_tenantId", fields: [tenantId], references: [id], onDelete: Restrict)
+  resourceType     ResourceType
+  resourceId       String       @db.Uuid
+  resourceLabel    String
+  docType          String
+  number           String
+  issuedAt         DateTime     @db.Timestamptz(3)
+  expiresAt        DateTime     @db.Timestamptz(3)
+  critical         Boolean
+  replaced         Boolean      @default(false)
+  replacedAt       DateTime?    @db.Timestamptz(3)
+  fileId           String?      @db.Uuid
+  file             StoredFile?  @relation("ComplianceDocument_fileId", fields: [fileId], references: [id], onDelete: Restrict)
+  fileName         String?
+  fileSize         Int?
+  fileType         String?
+  createdAt        DateTime     @default(now()) @db.Timestamptz(3)
+  createdBy        String
+  alertsByDocument Alert[]      @relation("Alert_documentId")
+
+  @@index([tenantId, resourceId, replaced])
+  @@index([tenantId, expiresAt])
+  @@map("compliance_document")
+}
+
+enum MaintenanceKind {
+  PREVENTIVO @map("Preventivo")
+  CORRECTIVO @map("Correctivo")
+  INSPECCION @map("Inspección")
+}
+
+enum MaintenanceStatus {
+  PENDIENTE    @map("Pendiente")
+  PROGRAMADA   @map("Programada")
+  EN_EJECUCION @map("En ejecución")
+  COMPLETADA   @map("Completada")
+  CERRADA      @map("Cerrada")
+  CANCELADA    @map("Cancelada")
+}
+
+enum InspectionResult {
+  APROBADA  @map("Aprobada")
+  RECHAZADA @map("Rechazada")
+}
+
+model MaintenanceOrder {
+  id               String            @id @default(uuid(7)) @db.Uuid
+  tenantId         String            @db.Uuid
+  tenant           Tenant            @relation("MaintenanceOrder_tenantId", fields: [tenantId], references: [id], onDelete: Restrict)
+  code             String
+  vehicleId        String            @db.Uuid
+  vehicle          Vehicle           @relation("MaintenanceOrder_vehicleId", fields: [vehicleId], references: [id], onDelete: Restrict)
+  vehiclePlate     String
+  kind             MaintenanceKind
+  status           MaintenanceStatus @default(PENDIENTE)
+  scheduledAt      DateTime          @db.Timestamptz(3)
+  description      String
+  critical         Boolean
+  inspectionResult InspectionResult?
+  odometerKm       Int?
+  cancelReason     String?
+  createdBy        String
+  createdAt        DateTime          @default(now()) @db.Timestamptz(3)
+  version          Int               @default(1)
+
+  @@unique([tenantId, code])
+  @@index([tenantId, vehicleId, status])
+  @@map("maintenance_order")
+}
+
+/// ───────────────────────────── Planificación y despacho (ENT-009–013) ─────────────────────────────
+
+enum RouteStatus {
+  BORRADOR   @map("Borrador")
+  AUTORIZADA @map("Autorizada")
+  OBSOLETA   @map("Obsoleta")
+}
+
+/// ENT-010/011. Versionada: una nueva versión deja la anterior «Obsoleta». Puntos y geocercas son inmutables por versión (JSON).
+model Route {
+  id                     String      @id @default(uuid(7)) @db.Uuid
+  tenantId               String      @db.Uuid
+  tenant                 Tenant      @relation("Route_tenantId", fields: [tenantId], references: [id], onDelete: Restrict)
+  name                   String
+  origin                 String
+  destination            String
+  /// [{ name, lat, lon, stop: 'Sube'|'Baja'|'Sube y baja'|null }]
+  points                 Json
+  /// [{ id, name, lat, lon, radiusM }]
+  geofences              Json
+  speedLimitKmh          Int
+  distanceKm             Int
+  version                Int
+  status                 RouteStatus
+  baseId                 String      @db.Uuid
+  base                   OrgUnit     @relation("Route_baseId", fields: [baseId], references: [id], onDelete: Restrict)
+  authorizedAlternatives String[]
+  retiredReason          String?
+  createdBy              String
+  createdAt              DateTime    @default(now()) @db.Timestamptz(3)
+  tripsByRoute           Trip[]      @relation("Trip_routeId")
+
+  @@index([tenantId, name, status])
+  @@index([tenantId, baseId])
+  @@map("route")
+}
+
+enum ServiceStatus {
+  BORRADOR   @map("Borrador")
+  VIGENTE    @map("Vigente")
+  SUSPENDIDO @map("Suspendido")
+  FINALIZADO @map("Finalizado")
+}
+
+enum ClientDocumentType {
+  RUC
+  DNI
+}
+
+/// ENT-009 · RF-008 (PC-A8). Agrupa viajes de un cliente o línea, con rutas autorizadas y vigencia.
+model TransportService {
+  id               String              @id @default(uuid(7)) @db.Uuid
+  tenantId         String              @db.Uuid
+  tenant           Tenant              @relation("TransportService_tenantId", fields: [tenantId], references: [id], onDelete: Restrict)
+  code             String
+  name             String
+  documentType     ClientDocumentType?
+  document         String?
+  customer         String
+  type             String
+  routeIds         String[]            @db.Uuid
+  startsAt         DateTime            @db.Timestamptz(3)
+  endsAt           DateTime            @db.Timestamptz(3)
+  status           ServiceStatus       @default(BORRADOR)
+  notes            String              @default("")
+  lastChangeReason String?
+  createdBy        String
+  createdAt        DateTime            @default(now()) @db.Timestamptz(3)
+  version          Int                 @default(1)
+  tripsByService   Trip[]              @relation("Trip_serviceId")
+
+  @@unique([tenantId, code])
+  @@map("transport_service")
+}
+
+enum TripLifecycle {
+  BORRADOR          @map("Borrador")
+  PLANIFICADO       @map("Planificado")
+  ASIGNADO          @map("Asignado")
+  LISTO_PARA_SALIDA @map("Listo para salida")
+  EN_RUTA           @map("En ruta")
+  EN_DESTINO        @map("En destino")
+  CERRADO           @map("Cerrado")
+  CANCELADO         @map("Cancelado")
+  INTERRUMPIDO      @map("Interrumpido")
+  REPROGRAMADO      @map("Reprogramado")
+}
+
+enum TripPriority {
+  NORMAL  @map("Normal")
+  ALTA    @map("Alta")
+  URGENTE @map("Urgente")
+}
+
+/// ENT-012. `version` = concurrencia optimista (ADR-006). Las condiciones (Retrasado, Con alerta…) se derivan al leer.
+model Trip {
+  id                 String            @id @default(uuid(7)) @db.Uuid
+  tenantId           String            @db.Uuid
+  tenant             Tenant            @relation("Trip_tenantId", fields: [tenantId], references: [id], onDelete: Restrict)
+  code               String
+  routeId            String            @db.Uuid
+  route              Route             @relation("Trip_routeId", fields: [routeId], references: [id], onDelete: Restrict)
+  routeName          String
+  routeVersion       Int
+  baseId             String            @db.Uuid
+  base               OrgUnit           @relation("Trip_baseId", fields: [baseId], references: [id], onDelete: Restrict)
+  baseName           String
+  plannedDeparture   DateTime          @db.Timestamptz(3)
+  plannedEta         DateTime          @db.Timestamptz(3)
+  etaUpdated         DateTime?         @db.Timestamptz(3)
+  vehicleId          String?           @db.Uuid
+  vehicle            Vehicle?          @relation("Trip_vehicleId", fields: [vehicleId], references: [id], onDelete: Restrict)
+  vehiclePlate       String?
+  driverId           String?           @db.Uuid
+  driver             Driver?           @relation("Trip_driverId", fields: [driverId], references: [id], onDelete: Restrict)
+  driverName         String?
+  priority           TripPriority
+  instructions       String            @default("")
+  lifecycle          TripLifecycle
+  createdBy          String
+  createdByUserId    String            @db.Uuid
+  createdByUser      User              @relation("Trip_createdByUserId", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  serviceId          String?           @db.Uuid
+  service            TransportService? @relation("Trip_serviceId", fields: [serviceId], references: [id], onDelete: Restrict)
+  serviceCode        String?
+  serviceName        String?
+  /// Organización cliente (ROL-013, CUSTOMER_ORG) con visibilidad sobre este viaje.
+  customerOrgId      String?           @db.Uuid
+  dispatchAuthorized Boolean           @default(false)
+  startedAt          DateTime?         @db.Timestamptz(3)
+  arrivedAt          DateTime?         @db.Timestamptz(3)
+  closedAt           DateTime?         @db.Timestamptz(3)
+  closedOnTime       Boolean?
+  replacedByTripId   String?           @db.Uuid
+  replacedByTrip     Trip?             @relation("Trip_replacedByTripId", fields: [replacedByTripId], references: [id], onDelete: Restrict)
+  version            Int               @default(1)
+  createdAt          DateTime          @default(now()) @db.Timestamptz(3)
+
+  events                     TripEvent[]
+  assignments                TripAssignment[]
+  tripsByReplacedByTrip      Trip[]                @relation("Trip_replacedByTripId")
+  gateEvaluationsByTrip      GateEvaluation[]      @relation("GateEvaluation_tripId")
+  dispatchMessagesByTrip     DispatchMessage[]     @relation("DispatchMessage_tripId")
+  vehicleLastPositionsByTrip VehicleLastPosition[] @relation("VehicleLastPosition_tripId")
+  alertsByTrip               Alert[]               @relation("Alert_tripId")
+  incidentsByTrip            Incident[]            @relation("Incident_tripId")
+  cargoShipmentsByTrip       CargoShipment[]       @relation("CargoShipment_tripId")
+  passengerBookingsByTrip    PassengerBooking[]    @relation("PassengerBooking_tripId")
+
+  @@unique([tenantId, code])
+  @@index([tenantId, lifecycle])
+  @@index([tenantId, vehicleId, lifecycle])
+  @@index([tenantId, driverId, lifecycle])
+  @@index([tenantId, baseId, plannedDeparture])
+  @@map("trip")
+}
+
+enum TripEventKind {
+  PLAN       @map("Plan")
+  ASIGNACION @map("Asignación")
+  GATE       @map("Gate")
+  DESPACHO   @map("Despacho")
+  EJECUCION  @map("Ejecución")
+  ALERTA     @map("Alerta")
+  INCIDENCIA @map("Incidencia")
+  CAMBIO     @map("Cambio")
+  CIERRE     @map("Cierre")
+}
+
+/// Línea de tiempo del viaje (append-only).
+model TripEvent {
+  id       String        @id @default(uuid(7)) @db.Uuid
+  tenantId String        @db.Uuid
+  tenant   Tenant        @relation("TripEvent_tenantId", fields: [tenantId], references: [id], onDelete: Restrict)
+  tripId   String        @db.Uuid
+  trip     Trip          @relation(fields: [tripId], references: [id])
+  at       DateTime      @default(now()) @db.Timestamptz(3)
+  actor    String
+  kind     TripEventKind
+  summary  String
+  reason   String?
+
+  @@index([tripId, at])
+  @@map("trip_event")
+}
+
+/// ENT-013 · RN-008: cada cambio de asignación conserva la asignación anterior, motivo, actor y momento.
+model TripAssignment {
+  id           String   @id @default(uuid(7)) @db.Uuid
+  tenantId     String   @db.Uuid
+  tenant       Tenant   @relation("TripAssignment_tenantId", fields: [tenantId], references: [id], onDelete: Restrict)
+  tripId       String   @db.Uuid
+  trip         Trip     @relation(fields: [tripId], references: [id])
+  at           DateTime @default(now()) @db.Timestamptz(3)
+  vehiclePlate String?
+  driverName   String?
+  actor        String
+  reason       String?
+  evidence     String?
+
+  @@index([tripId, at])
+  @@map("trip_assignment")
+}
+
+/// Evaluaciones del gate CTRL-001 (base de KPI-003/004).
+model GateEvaluation {
+  id           String   @id @default(uuid(7)) @db.Uuid
+  tenantId     String   @db.Uuid
+  tenant       Tenant   @relation("GateEvaluation_tenantId", fields: [tenantId], references: [id], onDelete: Restrict)
+  tripId       String   @db.Uuid
+  trip         Trip     @relation("GateEvaluation_tripId", fields: [tripId], references: [id], onDelete: Restrict)
+  evaluatedAt  DateTime @default(now()) @db.Timestamptz(3)
+  overall      String
+  failed       Boolean
+  /// Requisitos evaluados (evidencia de la decisión).
+  requirements Json
+  action       String
+
+  @@index([tenantId, evaluatedAt])
+  @@map("gate_evaluation")
+}
+
+enum MessageFrom {
+  CONTROL   @map("Control")
+  CONDUCTOR @map("Conductor")
+}
+
+/// PC-A15: mensajería control ↔ conductor por viaje (texto, auditable).
+model DispatchMessage {
+  id           String      @id @default(uuid(7)) @db.Uuid
+  tenantId     String      @db.Uuid
+  tenant       Tenant      @relation("DispatchMessage_tenantId", fields: [tenantId], references: [id], onDelete: Restrict)
+  tripId       String      @db.Uuid
+  trip         Trip        @relation("DispatchMessage_tripId", fields: [tripId], references: [id], onDelete: Restrict)
+  tripCode     String
+  vehiclePlate String?
+  from         MessageFrom
+  authorName   String
+  authorId     String      @db.Uuid
+  author       User        @relation("DispatchMessage_authorId", fields: [authorId], references: [id], onDelete: Restrict)
+  text         String
+  sentAt       DateTime    @db.Timestamptz(3)
+  receivedAt   DateTime    @default(now()) @db.Timestamptz(3)
+
+  @@index([tenantId, tripId, sentAt])
+  @@map("dispatch_message")
+}
+
+/// ───────────────────────────── Monitoreo (ENT-014/015) ─────────────────────────────
+
+/// Historial de telemetría (INT-001). Único por vehículo + instante de origen: un evento reprocesado no se duplica (EXC-011).
+model TelemetryEvent {
+  id         String   @id @default(uuid(7)) @db.Uuid
+  tenantId   String   @db.Uuid
+  tenant     Tenant   @relation("TelemetryEvent_tenantId", fields: [tenantId], references: [id], onDelete: Restrict)
+  vehicleId  String   @db.Uuid
+  vehicle    Vehicle  @relation("TelemetryEvent_vehicleId", fields: [vehicleId], references: [id], onDelete: Restrict)
+  deviceId   String
+  sourceTime DateTime @db.Timestamptz(3)
+  receivedAt DateTime @default(now()) @db.Timestamptz(3)
+  lat        Float
+  lon        Float
+  speedKmh   Float?
+  heading    Float?
+  ignition   Boolean?
+  odometerKm Int?
+  /// true si llegó fuera de orden (más antiguo que la última posición): se conserva pero no reemplaza la actual (EXC-012).
+  outOfOrder Boolean  @default(false)
+
+  @@unique([vehicleId, sourceTime])
+  @@index([tenantId, receivedAt])
+  @@map("telemetry_event")
+}
+
+/// Última posición conocida por vehículo (lectura rápida del mapa). La frescura se calcula al leer (RN-005).
+model VehicleLastPosition {
+  vehicleId  String   @id @db.Uuid
+  vehicle    Vehicle  @relation("VehicleLastPosition_vehicleId", fields: [vehicleId], references: [id], onDelete: Restrict)
+  tenantId   String   @db.Uuid
+  tenant     Tenant   @relation("VehicleLastPosition_tenantId", fields: [tenantId], references: [id], onDelete: Restrict)
+  tripId     String?  @db.Uuid
+  trip       Trip?    @relation("VehicleLastPosition_tripId", fields: [tripId], references: [id], onDelete: Restrict)
+  lat        Float
+  lon        Float
+  speedKmh   Float?
+  heading    Float?
+  ignition   Boolean?
+  sourceTime DateTime @db.Timestamptz(3)
+  updatedAt  DateTime @updatedAt @db.Timestamptz(3)
+
+  @@index([tenantId])
+  @@map("vehicle_last_position")
+}
+
+/// Credencial de integración (ADR-015): el proveedor GPS se autentica con una clave por negocio (solo se guarda su hash).
+model IntegrationCredential {
+  id         String    @id @default(uuid(7)) @db.Uuid
+  tenantId   String    @db.Uuid
+  tenant     Tenant    @relation("IntegrationCredential_tenantId", fields: [tenantId], references: [id], onDelete: Restrict)
+  kind       String
+  label      String
+  keyHash    String    @unique
+  active     Boolean   @default(true)
+  lastUsedAt DateTime? @db.Timestamptz(3)
+  createdAt  DateTime  @default(now()) @db.Timestamptz(3)
+
+  @@index([tenantId, kind])
+  @@map("integration_credential")
+}
+
+enum AlertKind {
+  EXCESO_VELOCIDAD @map("Exceso de velocidad")
+  DESVIO_RUTA      @map("Desvío de ruta")
+  PARADA           @map("Parada no programada")
+  SIN_SENAL        @map("Sin señal")
+  GEOCERCA         @map("Geocerca")
+  RETRASO          @map("Retraso")
+  VENCIMIENTO      @map("Vencimiento")
+}
+
+enum Severity {
+  INFORMATIVA @map("Informativa")
+  BAJA        @map("Baja")
+  MEDIA       @map("Media")
+  ALTA        @map("Alta")
+  CRITICA     @map("Crítica")
+}
+
+enum AlertStatus {
+  NUEVA      @map("Nueva")
+  RECONOCIDA @map("Reconocida")
+  EN_GESTION @map("En gestión")
+  RESUELTA   @map("Resuelta")
+  CERRADA    @map("Cerrada")
+}
+
+/// ENT-015. Una alerta es una detección; no es una incidencia (DEC-004).
+model Alert {
+  id                     String              @id @default(uuid(7)) @db.Uuid
+  tenantId               String              @db.Uuid
+  tenant                 Tenant              @relation("Alert_tenantId", fields: [tenantId], references: [id], onDelete: Restrict)
+  kind                   AlertKind
+  severity               Severity
+  status                 AlertStatus         @default(NUEVA)
+  tripId                 String?             @db.Uuid
+  trip                   Trip?               @relation("Alert_tripId", fields: [tripId], references: [id], onDelete: Restrict)
+  tripCode               String?
+  vehicleId              String?             @db.Uuid
+  vehicle                Vehicle?            @relation("Alert_vehicleId", fields: [vehicleId], references: [id], onDelete: Restrict)
+  vehiclePlate           String?
+  detail                 String
+  assignee               String?
+  incidentId             String?             @db.Uuid
+  incident               Incident?           @relation("Alert_incidentId", fields: [incidentId], references: [id], onDelete: Restrict)
+  evidence               String?
+  evidenceFileIds        String[]            @db.Uuid
+  requiresReview         Boolean             @default(false)
+  /// Alertas de vencimiento (PC-A7).
+  documentId             String?             @db.Uuid
+  document               ComplianceDocument? @relation("Alert_documentId", fields: [documentId], references: [id], onDelete: Restrict)
+  subject                String?
+  dueAt                  DateTime?           @db.Timestamptz(3)
+  phase                  String?
+  /// Clave de deduplicación de la regla que la generó (una alerta abierta por condición).
+  dedupeKey              String?
+  createdAt              DateTime            @default(now()) @db.Timestamptz(3)
+  ackAt                  DateTime?           @db.Timestamptz(3)
+  resolvedAt             DateTime?           @db.Timestamptz(3)
+  closedAt               DateTime?           @db.Timestamptz(3)
+  version                Int                 @default(1)
+  incidentsByOriginAlert Incident[]          @relation("Incident_originAlertId")
+
+  @@index([tenantId, status])
+  @@index([tenantId, tripId])
+  @@index([tenantId, vehicleId, kind, status])
+  @@index([tenantId, documentId])
+  @@index([tenantId, dedupeKey])
+  @@map("alert")
+}
+
+/// ───────────────────────────── Incidencias (ENT-016) ─────────────────────────────
+
+enum IncidentStatus {
+  NUEVA       @map("Nueva")
+  CLASIFICADA @map("Clasificada")
+  EN_ATENCION @map("En atención")
+  CONTENIDA   @map("Contenida")
+  RESUELTA    @map("Resuelta")
+  CERRADA     @map("Cerrada")
+}
+
+enum IncidentCategory {
+  AVERIA    @map("Avería")
+  ACCIDENTE @map("Accidente")
+  RETRASO   @map("Retraso")
+  BLOQUEO   @map("Bloqueo")
+  MECANICA  @map("Mecánica")
+  SEGURIDAD @map("Seguridad")
+  CARGA     @map("Carga")
+  PASAJERO  @map("Pasajero")
+}
+
+model Incident {
+  id               String            @id @default(uuid(7)) @db.Uuid
+  tenantId         String            @db.Uuid
+  tenant           Tenant            @relation("Incident_tenantId", fields: [tenantId], references: [id], onDelete: Restrict)
+  code             String
+  category         IncidentCategory?
+  severity         Severity
+  status           IncidentStatus
+  emergency        Boolean           @default(false)
+  originAlertId    String?           @db.Uuid
+  originAlert      Alert?            @relation("Incident_originAlertId", fields: [originAlertId], references: [id], onDelete: Restrict)
+  tripId           String?           @db.Uuid
+  trip             Trip?             @relation("Incident_tripId", fields: [tripId], references: [id], onDelete: Restrict)
+  tripCode         String?
+  vehicleId        String?           @db.Uuid
+  vehicle          Vehicle?          @relation("Incident_vehicleId", fields: [vehicleId], references: [id], onDelete: Restrict)
+  vehiclePlate     String?
+  description      String
+  continuityPlan   String?
+  resolution       String?
+  /// Evidencias antiguas/offline registradas solo por nombre (cuentan, pero no tienen archivo).
+  evidenceNames    String[]
+  evidenceFileIds  String[]          @db.Uuid
+  reportedBy       String
+  reportedById     String            @db.Uuid
+  reportedByRef    User              @relation("Incident_reportedById", fields: [reportedById], references: [id], onDelete: Restrict)
+  requiresReview   Boolean
+  occurredAt       DateTime          @db.Timestamptz(3)
+  createdAt        DateTime          @default(now()) @db.Timestamptz(3)
+  resolvedAt       DateTime?         @db.Timestamptz(3)
+  closedAt         DateTime?         @db.Timestamptz(3)
+  version          Int               @default(1)
+  actions          IncidentAction[]
+  alertsByIncident Alert[]           @relation("Alert_incidentId")
+
+  @@unique([tenantId, code])
+  @@index([tenantId, status])
+  @@index([tenantId, originAlertId])
+  @@map("incident")
+}
+
+model IncidentAction {
+  id         String   @id @default(uuid(7)) @db.Uuid
+  tenantId   String   @db.Uuid
+  tenant     Tenant   @relation("IncidentAction_tenantId", fields: [tenantId], references: [id], onDelete: Restrict)
+  incidentId String   @db.Uuid
+  incident   Incident @relation(fields: [incidentId], references: [id])
+  at         DateTime @default(now()) @db.Timestamptz(3)
+  actor      String
+  text       String
+
+  @@index([incidentId, at])
+  @@map("incident_action")
+}
+
+/// ───────────────────────────── Catálogos, clientes (PC-A18/19) ─────────────────────────────
+
+enum CatalogKind {
+  CARGO_TYPE   @map("cargoType")
+  SERVICE_TYPE @map("serviceType")
+}
+
+model CatalogItem {
+  id        String      @id @default(uuid(7)) @db.Uuid
+  tenantId  String      @db.Uuid
+  tenant    Tenant      @relation("CatalogItem_tenantId", fields: [tenantId], references: [id], onDelete: Restrict)
+  kind      CatalogKind
+  label     String
+  /// Etiqueta normalizada para la unicidad (sin distinguir mayúsculas).
+  labelKey  String
+  hint      String      @default("")
+  active    Boolean     @default(true)
+  createdBy String
+  createdAt DateTime    @default(now()) @db.Timestamptz(3)
+  version   Int         @default(1)
+
+  @@unique([tenantId, kind, labelKey])
+  @@map("catalog_item")
+}
+
+/// Maestro de clientes por documento: un documento nunca queda con dos razones sociales distintas.
+model ClientProfile {
+  tenantId     String             @db.Uuid
+  tenant       Tenant             @relation("ClientProfile_tenantId", fields: [tenantId], references: [id], onDelete: Restrict)
+  documentType ClientDocumentType
+  document     String
+  customer     String
+  updatedAt    DateTime           @updatedAt @db.Timestamptz(3)
+
+  @@id([tenantId, documentType, document])
+  @@map("client_profile")
+}
+
+/// ───────────────────────────── Carga (ENT-017 · PC-A11) ─────────────────────────────
+
+enum CargoStatus {
+  REGISTRADA    @map("Registrada")
+  ASIGNADA      @map("Asignada")
+  EN_TRANSITO   @map("En tránsito")
+  ENTREGADA     @map("Entregada")
+  CON_EXCEPCION @map("Con excepción")
+  CANCELADA     @map("Cancelada")
+}
+
+model CargoShipment {
+  id           String             @id @default(uuid(7)) @db.Uuid
+  tenantId     String             @db.Uuid
+  tenant       Tenant             @relation("CargoShipment_tenantId", fields: [tenantId], references: [id], onDelete: Restrict)
+  code         String
+  documentType ClientDocumentType
+  document     String
+  customer     String
+  cargoType    String
+  description  String
+  packages     Int
+  weightKg     Float
+  origin       String
+  destination  String
+  promisedAt   DateTime           @db.Timestamptz(3)
+  status       CargoStatus        @default(REGISTRADA)
+  tripId       String?            @db.Uuid
+  trip         Trip?              @relation("CargoShipment_tripId", fields: [tripId], references: [id], onDelete: Restrict)
+  tripCode     String?
+  vehiclePlate String?
+  exception    String?
+  hadException Boolean            @default(false)
+  receivedBy   String?
+  deliveredAt  DateTime?          @db.Timestamptz(3)
+  createdBy    String
+  createdAt    DateTime           @default(now()) @db.Timestamptz(3)
+  version      Int                @default(1)
+  events       ShipmentEvent[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId, tripId, status])
+  @@map("cargo_shipment")
+}
+
+model ShipmentEvent {
+  id         String        @id @default(uuid(7)) @db.Uuid
+  tenantId   String        @db.Uuid
+  tenant     Tenant        @relation("ShipmentEvent_tenantId", fields: [tenantId], references: [id], onDelete: Restrict)
+  shipmentId String        @db.Uuid
+  shipment   CargoShipment @relation(fields: [shipmentId], references: [id])
+  at         DateTime      @default(now()) @db.Timestamptz(3)
+  actor      String
+  title      String
+  detail     String?
+
+  @@index([shipmentId, at])
+  @@map("shipment_event")
+}
+
+/// ───────────────────────────── Pasajeros (ENT-018 · PC-A6/16) ─────────────────────────────
+
+enum PassengerDocumentType {
+  DNI
+  CE
+  PASAPORTE @map("Pasaporte")
+}
+
+enum PassengerStatus {
+  RESERVADA      @map("Reservada")
+  ABORDO         @map("Abordó")
+  LLEGO          @map("Llegó a destino")
+  NO_SE_PRESENTO @map("No se presentó")
+  CANCELADA      @map("Cancelada")
+}
+
+/// Maestro del pasajero por documento (dato personal: NFR-007).
+model PassengerProfile {
+  tenantId         String                @db.Uuid
+  tenant           Tenant                @relation("PassengerProfile_tenantId", fields: [tenantId], references: [id], onDelete: Restrict)
+  documentType     PassengerDocumentType
+  document         String
+  lastNamePaternal String
+  lastNameMaternal String                @default("")
+  firstNames       String
+  updatedAt        DateTime              @updatedAt @db.Timestamptz(3)
+
+  @@id([tenantId, documentType, document])
+  @@map("passenger_profile")
+}
+
+model PassengerBooking {
+  id               String                @id @default(uuid(7)) @db.Uuid
+  tenantId         String                @db.Uuid
+  tenant           Tenant                @relation("PassengerBooking_tenantId", fields: [tenantId], references: [id], onDelete: Restrict)
+  code             String
+  documentType     PassengerDocumentType
+  document         String
+  lastNamePaternal String
+  lastNameMaternal String                @default("")
+  firstNames       String
+  phone            String?
+  reducedMobility  Boolean               @default(false)
+  tripId           String                @db.Uuid
+  trip             Trip                  @relation("PassengerBooking_tripId", fields: [tripId], references: [id], onDelete: Restrict)
+  tripCode         String
+  routeName        String
+  plannedDeparture DateTime              @db.Timestamptz(3)
+  vehiclePlate     String
+  boardStop        String
+  alightStop       String
+  seat             Int
+  status           PassengerStatus       @default(RESERVADA)
+  cancelReason     String?
+  createdBy        String
+  createdAt        DateTime              @default(now()) @db.Timestamptz(3)
+  version          Int                   @default(1)
+  events           BookingEvent[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId, tripId, status])
+  @@index([tenantId, documentType, document])
+  @@map("passenger_booking")
+}
+
+model BookingEvent {
+  id        String           @id @default(uuid(7)) @db.Uuid
+  tenantId  String           @db.Uuid
+  tenant    Tenant           @relation("BookingEvent_tenantId", fields: [tenantId], references: [id], onDelete: Restrict)
+  bookingId String           @db.Uuid
+  booking   PassengerBooking @relation(fields: [bookingId], references: [id])
+  at        DateTime         @default(now()) @db.Timestamptz(3)
+  actor     String
+  title     String
+  detail    String?
+
+  @@index([bookingId, at])
+  @@map("booking_event")
+}
+
+/// ───────────────────────────── Archivos (ADR-009) ─────────────────────────────
+
+enum FileStatus {
+  PENDIENTE  @map("Pendiente")
+  DISPONIBLE @map("Disponible")
+}
+
+/// Metadatos del archivo. El contenido vive en el almacenamiento (puerto `ObjectStorage`); aquí nunca hay binarios ni credenciales.
+model StoredFile {
+  id                        String               @id @default(uuid(7)) @db.Uuid
+  tenantId                  String               @db.Uuid
+  tenant                    Tenant               @relation("StoredFile_tenantId", fields: [tenantId], references: [id], onDelete: Restrict)
+  name                      String
+  size                      Int
+  type                      String
+  storageKey                String               @unique
+  status                    FileStatus           @default(PENDIENTE)
+  uploadedBy                String               @db.Uuid
+  createdAt                 DateTime             @default(now()) @db.Timestamptz(3)
+  completedAt               DateTime?            @db.Timestamptz(3)
+  complianceDocumentsByFile ComplianceDocument[] @relation("ComplianceDocument_fileId")
+
+  @@index([tenantId, status])
+  @@map("stored_file")
+}
+
+/// ───────────────────────────── Notificaciones (ADR-010) ─────────────────────────────
+
+model Notification {
+  id         String                 @id @default(uuid(7)) @db.Uuid
+  tenantId   String                 @db.Uuid
+  tenant     Tenant                 @relation("Notification_tenantId", fields: [tenantId], references: [id], onDelete: Restrict)
+  kind       String
+  severity   Severity
+  title      String
+  body       String
+  link       String?
+  /// Una notificación por clave (p. ej. «subscription.por-vencer.2026-10-01»): repetir la regla no satura la bandeja.
+  dedupeKey  String?
+  createdAt  DateTime               @default(now()) @db.Timestamptz(3)
+  readAt     DateTime?              @db.Timestamptz(3)
+  deliveries NotificationDelivery[]
+
+  @@unique([tenantId, dedupeKey])
+  @@index([tenantId, createdAt])
+  @@map("notification")
+}
+
+enum DeliveryStatus {
+  ENTREGADA @map("Entregada")
+  PENDIENTE @map("Pendiente")
+  FALLIDA   @map("Fallida")
+}
+
+/// Estado de entrega por canal (≠ estado de gestión). Solo In-app tiene adaptador; Email/Push quedan PENDIENTES de DOC-F-INT.
+model NotificationDelivery {
+  id             String         @id @default(uuid(7)) @db.Uuid
+  notificationId String         @db.Uuid
+  notification   Notification   @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+  channel        String
+  status         DeliveryStatus
+  attempts       Int            @default(0)
+  lastError      String?
+  nextAttemptAt  DateTime?      @db.Timestamptz(3)
+  updatedAt      DateTime       @updatedAt @db.Timestamptz(3)
+
+  @@index([status, nextAttemptAt])
+  @@map("notification_delivery")
+}
+
+/// ───────────────────────────── Auditoría (ENT-019 · ADR-011) ─────────────────────────────
+
+enum AuditKind {
+  NEGOCIO   @map("Negocio")
+  SEGURIDAD @map("Seguridad")
+}
+
+/// Append-only: la migración instala un trigger que rechaza UPDATE/DELETE. `before/after` nunca contienen secretos.
+model AuditEvent {
+  id            String    @id @default(uuid(7)) @db.Uuid
+  at            DateTime  @default(now()) @db.Timestamptz(3)
+  kind          AuditKind
+  tenantId      String?   @db.Uuid
+  actorUserId   String?   @db.Uuid
+  actor         String
+  actorRoles    String[]
+  resourceType  String
+  resourceId    String
+  action        String
+  result        String    @default("OK")
+  reason        String?
+  before        String?
+  after         String?
+  correlationId String
+  ip            String?
+  userAgent     String?
+
+  @@index([tenantId, at(sort: Desc), id(sort: Desc)])
+  @@index([tenantId, resourceType, resourceId, at])
+  @@index([action, at])
+  @@map("audit_event")
+}
+
+/// ───────────────────────────── Transversal ─────────────────────────────
+
+/// Idempotencia (ADR-002): misma clave + misma intención ⇒ misma respuesta; otra intención ⇒ IDEMPOTENCY_CONFLICT.
+model IdempotencyRecord {
+  id          String   @id @default(uuid(7)) @db.Uuid
+  scopeKey    String   @unique
+  requestHash String
+  status      String
+  httpStatus  Int?
+  response    Json?
+  createdAt   DateTime @default(now()) @db.Timestamptz(3)
+  expiresAt   DateTime @db.Timestamptz(3)
+
+  @@index([expiresAt])
+  @@map("idempotency_record")
+}
+
+/// Ejecuciones de jobs (señal de observabilidad para la consola de plataforma).
+model JobRun {
+  id         String    @id @default(uuid(7)) @db.Uuid
+  job        String
+  startedAt  DateTime  @default(now()) @db.Timestamptz(3)
+  finishedAt DateTime? @db.Timestamptz(3)
+  status     String
+  detail     String?
+
+  @@index([job, startedAt])
+  @@map("job_run")
+}

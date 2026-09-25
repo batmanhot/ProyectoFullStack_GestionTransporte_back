@@ -1,0 +1,70 @@
+{
+  "name": "transportes-backend",
+  "version": "0.1.0",
+  "private": true,
+  "description": "DOC-E-BE — Backend del Sistema de Gestión de Transportes (NestJS + Fastify + Prisma + PostgreSQL).",
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "prisma generate && tsc -p tsconfig.build.json",
+    "start": "node dist/main.js",
+    "start:dev": "node scripts/dev.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint src test",
+    "test": "jest",
+    "test:int": "node --experimental-vm-modules node_modules/jest/bin/jest.js --config jest.int.config.js --runInBand",
+    "verify": "npm run lint && npm run typecheck && npm test && npm run build",
+    "prisma:generate": "prisma generate",
+    "prisma:validate": "prisma validate",
+    "db:migrate:dev": "prisma migrate dev",
+    "db:migrate:deploy": "prisma migrate deploy",
+    "db:seed": "tsx prisma/seed.ts",
+    "openapi": "npm run build && node dist/tools/export-openapi.js",
+    "postinstall": "prisma generate"
+  },
+  "dependencies": {
+    "@fastify/cookie": "11.1.2",
+    "@fastify/helmet": "13.1.1",
+    "@fastify/static": "10.1.4",
+    "@nestjs/common": "11.2.6",
+    "@nestjs/core": "11.2.6",
+    "@nestjs/event-emitter": "3.1.0",
+    "@nestjs/jwt": "11.0.2",
+    "@nestjs/platform-fastify": "11.2.6",
+    "@nestjs/schedule": "6.1.3",
+    "@nestjs/swagger": "11.4.7",
+    "@nestjs/throttler": "6.7.1",
+    "@prisma/adapter-pg": "7.10.0",
+    "@prisma/client": "7.10.0",
+    "bcrypt": "6.0.0",
+    "class-transformer": "0.5.1",
+    "class-validator": "0.15.1",
+    "dotenv": "17.4.2",
+    "fastify": "5.12.5",
+    "pg": "8.23.0",
+    "reflect-metadata": "0.2.2",
+    "rxjs": "7.8.2",
+    "ws": "8.21.3"
+  },
+  "devDependencies": {
+    "@eslint/js": "9.39.5",
+    "@nestjs/testing": "11.2.6",
+    "@types/bcrypt": "6.0.0",
+    "@types/jest": "30.0.0",
+    "@types/node": "22.20.4",
+    "@types/pg": "8.23.1",
+    "@types/ws": "8.18.1",
+    "eslint": "9.39.5",
+    "jest": "30.5.2",
+    "prisma": "7.10.0",
+    "ts-jest": "29.4.13",
+    "tsx": "4.23.15",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.70.1"
+  },
+  "overrides": {
+    "fastify": "5.12.5"
+  }
+}

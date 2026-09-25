@@ -1,0 +1,24 @@
+# Dependencias y compilación
+node_modules/
+dist/
+coverage/
+
+# Cliente de Prisma generado (se regenera con `npm install` / `npm run build`)
+/src/generated/
+
+# Almacenamiento local de archivos (adaptador de desarrollo)
+/storage/
+
+# Entorno: nunca versionar secretos. Solo se versiona el ejemplo.
+.env
+.env.*
+!.env.example
+
+# Logs y herramientas
+logs/
+*.log
+npm-debug.log*
+.DS_Store
+.vscode/*
+!.vscode/extensions.json
+.idea/
